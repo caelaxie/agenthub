@@ -2,14 +2,25 @@
   "name": "agenthub",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun --watch run src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@elysiajs/cors": "latest",
+    "@elysiajs/openapi": "latest",
+    "drizzle-orm": "latest",
+    "elysia": "latest",
+    "pg": "latest"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "@types/pg": "latest",
+    "bun-types": "latest",
+    "drizzle-kit": "latest",
+    "typescript": "latest"
   },
-  "module": "src/index.js"
+  "module": "src/index.ts"
 }
