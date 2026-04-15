@@ -1,7 +1,8 @@
-import { Elysia } from "elysia";
+import { env } from "./config/env";
+import { buildApp } from "./app";
 
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
+const app = buildApp();
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+app.listen(env.PORT);
+
+console.log(`AgentHub listening on http://localhost:${env.PORT}`);
