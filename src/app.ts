@@ -8,7 +8,10 @@ import { corsPlugin } from "./plugins/cors";
 import { docsPlugin } from "./plugins/docs";
 import { loggerPlugin } from "./plugins/logger";
 import { healthRoute } from "./modules/health/health.route";
-import { publicationPlugin } from "./modules/publication/publication.plugin";
+import {
+  createPublicationPlugin,
+} from "./modules/publication/publication.plugin";
+import type { PublicationService } from "./modules/publication/publication.service";
 import { verificationPlugin } from "./modules/verification/verification.plugin";
 import { discoveryPlugin } from "./modules/discovery/discovery.plugin";
 
@@ -54,7 +57,11 @@ const readValidationContext = (error: unknown) => {
   }
 };
 
-export const buildApp = () =>
+export interface AppDependencies {
+  publicationService?: PublicationService;
+}
+
+export const buildApp = (dependencies: AppDependencies = {}) =>
   new Elysia()
     .model({
       ErrorEnvelope: errorEnvelopeSchema,
@@ -64,7 +71,7 @@ export const buildApp = () =>
     .use(docsPlugin)
     .use(authPlugin)
     .use(healthRoute)
-    .use(publicationPlugin)
+    .use(createPublicationPlugin(dependencies.publicationService))
     .use(verificationPlugin)
     .use(discoveryPlugin)
     .onError(({ code, error, set }) => {

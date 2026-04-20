@@ -1,5 +1,6 @@
 import {
   agentIdParamsSchema,
+  agentPublicationInputSchema,
   agentPublicationSchema,
   deactivateResponseSchema,
   errorEnvelopeSchema,
@@ -8,7 +9,7 @@ import {
 } from "../../common/types/api";
 
 export const publishAgentParamsSchema = agentIdParamsSchema;
-export const publishAgentBodySchema = agentPublicationSchema;
+export const publishAgentBodySchema = agentPublicationInputSchema;
 export const publishAgentResponseSchema = publishAcceptedResponseSchema;
 export const getPublicationResponseSchema = publisherAgentRecordSchema;
 export const deactivateAgentResponseSchema = deactivateResponseSchema;

@@ -46,9 +46,8 @@ export const publicationsTable = pgTable(
   "agent_publications",
   {
     agentId: text("agent_id").primaryKey(),
-    namespace: text("namespace")
-      .notNull()
-      .references(() => namespacesTable.namespace),
+    namespace: text("namespace").notNull(),
+    pendingOwnerSubject: text("pending_owner_subject"),
     sourceUrl: text("source_url").notNull(),
     accessUrl: text("access_url").notNull(),
     accessMode: accessModeEnum("access_mode").notNull(),
@@ -65,7 +64,9 @@ export const publicationsTable = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    sourceUrlIdx: uniqueIndex("agent_publications_source_url_idx").on(table.sourceUrl),
+    sourceUrlIdx: uniqueIndex("agent_publications_source_url_active_idx")
+      .on(table.sourceUrl)
+      .where(sql`${table.status} = 'active'`),
   }),
 );
 

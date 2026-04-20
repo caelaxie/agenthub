@@ -6,6 +6,8 @@
     "start": "bun run src/index.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
+    "docs:db-schema": "bun run scripts/generate-db-schema-docs.ts",
+    "docs:db-schema:check": "bun run scripts/generate-db-schema-docs.ts --check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },

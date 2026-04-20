@@ -20,19 +20,23 @@ const publicationResponseSchemas = {
   404: publicationErrorResponseSchema,
   409: publicationErrorResponseSchema,
   422: publicationErrorResponseSchema,
-  501: publicationErrorResponseSchema,
+  502: publicationErrorResponseSchema,
 };
 
 export const createPublicationRoutes = (service: PublicationService) =>
   new Elysia({ name: "publication-routes" })
     .put(
       "/:agentId",
-      async ({ params, body, request }) =>
-        service.publishAgent(
+      async ({ params, body, request, set }) => {
+        const result = await service.publishAgent(
           params.agentId,
           body,
           buildPublisherContext(request),
-        ),
+        );
+
+        set.status = result.created ? 201 : 200;
+        return result.response;
+      },
       {
         params: publishAgentParamsSchema,
         body: publishAgentBodySchema,
@@ -55,7 +59,6 @@ export const createPublicationRoutes = (service: PublicationService) =>
           401: publicationErrorResponseSchema,
           403: publicationErrorResponseSchema,
           404: publicationErrorResponseSchema,
-          501: publicationErrorResponseSchema,
         },
         detail: {
           summary: "Retrieve owner-only publication state",
@@ -78,7 +81,6 @@ export const createPublicationRoutes = (service: PublicationService) =>
           401: publicationErrorResponseSchema,
           403: publicationErrorResponseSchema,
           404: publicationErrorResponseSchema,
-          501: publicationErrorResponseSchema,
         },
         detail: {
           summary: "Deactivate a published agent",

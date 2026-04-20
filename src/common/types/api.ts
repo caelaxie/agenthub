@@ -63,12 +63,24 @@ export const summaryOverridesSchema = t.Object(
   { additionalProperties: false },
 );
 
+const httpsUriStringSchema = t.String({
+  format: "uri",
+  pattern: "^https://",
+});
+
+export const agentPublicationInputSchema = t.Object(
+  {
+    agent_card_url: t.String(),
+    visibility: visibilitySchema,
+    facts_ref: t.Optional(t.Union([factsRefSchema, t.Null()])),
+    summary_overrides: t.Optional(summaryOverridesSchema),
+  },
+  { additionalProperties: false },
+);
+
 export const agentPublicationSchema = t.Object(
   {
-    agent_card_url: t.String({
-      format: "uri",
-      pattern: "^https://",
-    }),
+    agent_card_url: httpsUriStringSchema,
     visibility: visibilitySchema,
     facts_ref: t.Optional(t.Union([factsRefSchema, t.Null()])),
     summary_overrides: t.Optional(summaryOverridesSchema),
@@ -150,7 +162,7 @@ export const verifyDomainRequestSchema = t.Object(
 export const publishAcceptedResponseSchema = t.Object(
   {
     agent_id: t.String({ pattern: AGENT_ID_PATTERN }),
-    status: publicationStatusSchema,
+    status: t.Literal("pending_verification"),
     challenge: t.Optional(domainVerificationChallengeSchema),
   },
   { additionalProperties: false },
@@ -211,6 +223,7 @@ export const searchResponseSchema = t.Object(
 export type AppErrorPayload = typeof appErrorSchema.static;
 export type ErrorEnvelope = typeof errorEnvelopeSchema.static;
 export type HealthResponse = typeof healthResponseSchema.static;
+export type AgentPublicationInput = typeof agentPublicationInputSchema.static;
 export type AgentPublication = typeof agentPublicationSchema.static;
 export type AgentCardRef = typeof agentCardRefSchema.static;
 export type DomainVerificationChallenge =
