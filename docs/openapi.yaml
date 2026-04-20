@@ -1,0 +1,1570 @@
+openapi: 3.0.3
+info:
+  title: AgentHub API
+  description: Architecture-first scaffold for the AgentHub registry API.
+  version: 0.1.0
+tags:
+  - name: Health
+    description: Service health and readiness routes.
+  - name: Publication
+    description: Publisher write and administrative routes.
+  - name: Verification
+    description: Domain verification routes for pending publications.
+  - name: Discovery
+    description: Public lookup and search routes.
+paths:
+  /health:
+    get:
+      summary: Service health
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Response for status 200
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                  - version
+                  - timestamp
+                properties:
+                  status:
+                    const: ok
+                    type: string
+                  service:
+                    default: AgentHub
+                    type: string
+                  version:
+                    default: 0.1.0
+                    type: string
+                  timestamp:
+                    format: date-time
+                    type: string
+      operationId: getHealth
+  /v1/publish/agents/{agentId}:
+    put:
+      summary: Publish or update an agent
+      tags:
+        - Publication
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - agent_card_url
+                - visibility
+              properties:
+                agent_card_url:
+                  type: string
+                visibility:
+                  type: string
+                  enum:
+                    - public
+                    - restricted
+                facts_ref:
+                  anyOf:
+                    - additionalProperties: false
+                      type: object
+                      required:
+                        - type
+                        - url
+                      properties:
+                        type:
+                          anyOf:
+                            - const: public_url
+                              type: string
+                            - const: brokered_url
+                              type: string
+                        url:
+                          format: uri
+                          type: string
+                    - type: "null"
+                summary_overrides:
+                  additionalProperties: false
+                  type: object
+                  properties:
+                    provider:
+                      type: string
+          application/x-www-form-urlencoded:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - agent_card_url
+                - visibility
+              properties:
+                agent_card_url:
+                  type: string
+                visibility:
+                  type: string
+                  enum:
+                    - public
+                    - restricted
+                facts_ref:
+                  anyOf:
+                    - additionalProperties: false
+                      type: object
+                      required:
+                        - type
+                        - url
+                      properties:
+                        type:
+                          anyOf:
+                            - const: public_url
+                              type: string
+                            - const: brokered_url
+                              type: string
+                        url:
+                          format: uri
+                          type: string
+                    - type: "null"
+                summary_overrides:
+                  additionalProperties: false
+                  type: object
+                  properties:
+                    provider:
+                      type: string
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - agent_card_url
+                - visibility
+              properties:
+                agent_card_url:
+                  type: string
+                visibility:
+                  type: string
+                  enum:
+                    - public
+                    - restricted
+                facts_ref:
+                  anyOf:
+                    - additionalProperties: false
+                      type: object
+                      required:
+                        - type
+                        - url
+                      properties:
+                        type:
+                          anyOf:
+                            - const: public_url
+                              type: string
+                            - const: brokered_url
+                              type: string
+                        url:
+                          format: uri
+                          type: string
+                    - type: "null"
+                summary_overrides:
+                  additionalProperties: false
+                  type: object
+                  properties:
+                    provider:
+                      type: string
+      responses:
+        "200":
+          description: Response for status 200
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                type: object
+                required:
+                  - agent_id
+                  - status
+                properties:
+                  agent_id:
+                    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+                    type: string
+                  status:
+                    const: pending_verification
+                    type: string
+                  challenge:
+                    additionalProperties: false
+                    type: object
+                    required:
+                      - method
+                      - url
+                      - token
+                      - expires_at
+                    properties:
+                      method:
+                        const: well_known_token
+                        type: string
+                      url:
+                        format: uri
+                        type: string
+                      token:
+                        type: string
+                      expires_at:
+                        format: date-time
+                        type: string
+        "201":
+          description: Response for status 201
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                type: object
+                required:
+                  - agent_id
+                  - status
+                properties:
+                  agent_id:
+                    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+                    type: string
+                  status:
+                    const: pending_verification
+                    type: string
+                  challenge:
+                    additionalProperties: false
+                    type: object
+                    required:
+                      - method
+                      - url
+                      - token
+                      - expires_at
+                    properties:
+                      method:
+                        const: well_known_token
+                        type: string
+                      url:
+                        format: uri
+                        type: string
+                      token:
+                        type: string
+                      expires_at:
+                        format: date-time
+                        type: string
+        "400":
+          description: Response for status 400
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Response for status 401
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Response for status 403
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Response for status 404
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Response for status 409
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Response for status 422
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "502":
+          description: Response for status 502
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+      operationId: putV1PublishAgentsByAgentId
+    get:
+      summary: Retrieve owner-only publication state
+      tags:
+        - Publication
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+            type: string
+      responses:
+        "200":
+          description: Response for status 200
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                type: object
+                required:
+                  - agent_id
+                  - publication
+                  - status
+                  - agent_card_ref
+                  - ownership
+                  - last_validated_at
+                properties:
+                  agent_id:
+                    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+                    type: string
+                  publication:
+                    additionalProperties: false
+                    type: object
+                    required:
+                      - agent_card_url
+                      - visibility
+                    properties:
+                      agent_card_url:
+                        format: uri
+                        pattern: ^https://
+                        type: string
+                      visibility:
+                        type: string
+                        enum:
+                          - public
+                          - restricted
+                      facts_ref:
+                        anyOf:
+                          - additionalProperties: false
+                            type: object
+                            required:
+                              - type
+                              - url
+                            properties:
+                              type:
+                                anyOf:
+                                  - const: public_url
+                                    type: string
+                                  - const: brokered_url
+                                    type: string
+                              url:
+                                format: uri
+                                type: string
+                          - type: "null"
+                      summary_overrides:
+                        additionalProperties: false
+                        type: object
+                        properties:
+                          provider:
+                            type: string
+                  status:
+                    type: string
+                    enum:
+                      - pending_verification
+                      - active
+                      - inactive
+                      - invalid
+                  agent_card_ref:
+                    additionalProperties: false
+                    type: object
+                    required:
+                      - source_url
+                      - access_url
+                      - access_mode
+                      - last_validated_at
+                    properties:
+                      source_url:
+                        format: uri
+                        type: string
+                      access_url:
+                        format: uri
+                        type: string
+                      access_mode:
+                        type: string
+                        enum:
+                          - public
+                          - protected
+                      last_validated_at:
+                        format: date-time
+                        type: string
+                      etag:
+                        type: string
+                  ownership:
+                    additionalProperties: false
+                    type: object
+                    required:
+                      - namespace
+                      - owner_subject
+                    properties:
+                      namespace:
+                        type: string
+                      owner_subject:
+                        type: string
+                  challenge:
+                    additionalProperties: false
+                    type: object
+                    required:
+                      - method
+                      - url
+                      - token
+                      - expires_at
+                    properties:
+                      method:
+                        const: well_known_token
+                        type: string
+                      url:
+                        format: uri
+                        type: string
+                      token:
+                        type: string
+                      expires_at:
+                        format: date-time
+                        type: string
+                  last_validated_at:
+                    format: date-time
+                    type: string
+                  verified_at:
+                    anyOf:
+                      - format: date-time
+                        type: string
+                      - type: "null"
+                  last_error:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+        "400":
+          description: Response for status 400
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Response for status 401
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Response for status 403
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Response for status 404
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+      operationId: getV1PublishAgentsByAgentId
+  /v1/publish/agents/{agentId}/deactivate:
+    post:
+      summary: Deactivate a published agent
+      tags:
+        - Publication
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+            type: string
+      responses:
+        "200":
+          description: Response for status 200
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                type: object
+                required:
+                  - agent_id
+                  - status
+                properties:
+                  agent_id:
+                    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+                    type: string
+                  status:
+                    const: inactive
+                    type: string
+        "400":
+          description: Response for status 400
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Response for status 401
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Response for status 403
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Response for status 404
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+      operationId: postV1PublishAgentsByAgentIdDeactivate
+  /v1/publish/agents/{agentId}/verify-domain:
+    post:
+      summary: Verify domain ownership for a pending publication
+      tags:
+        - Verification
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - method
+              properties:
+                method:
+                  const: well_known_token
+                  type: string
+          application/x-www-form-urlencoded:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - method
+              properties:
+                method:
+                  const: well_known_token
+                  type: string
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - method
+              properties:
+                method:
+                  const: well_known_token
+                  type: string
+      responses:
+        "200":
+          description: Response for status 200
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                type: object
+                required:
+                  - agent_id
+                  - status
+                  - verified_at
+                properties:
+                  agent_id:
+                    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+                    type: string
+                  status:
+                    const: active
+                    type: string
+                  verified_at:
+                    format: date-time
+                    type: string
+        "400":
+          description: Response for status 400
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Response for status 401
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Response for status 403
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Response for status 404
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Response for status 409
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "501":
+          description: Response for status 501
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+      operationId: postV1PublishAgentsByAgentIdVerify-domain
+  /v1/agents/{agentId}:
+    get:
+      summary: Lookup a discoverable agent by id
+      tags:
+        - Discovery
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+            type: string
+      responses:
+        "200":
+          description: Response for status 200
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                type: object
+                required:
+                  - agent_id
+                  - display_name
+                  - agent_card_ref
+                  - skills
+                  - tags
+                  - supported_bindings
+                  - visibility
+                  - ttl_seconds
+                  - updated_at
+                  - status
+                properties:
+                  agent_id:
+                    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+                    type: string
+                  display_name:
+                    type: string
+                  provider:
+                    type: string
+                  agent_card_ref:
+                    additionalProperties: false
+                    type: object
+                    required:
+                      - source_url
+                      - access_url
+                      - access_mode
+                      - last_validated_at
+                    properties:
+                      source_url:
+                        format: uri
+                        type: string
+                      access_url:
+                        format: uri
+                        type: string
+                      access_mode:
+                        type: string
+                        enum:
+                          - public
+                          - protected
+                      last_validated_at:
+                        format: date-time
+                        type: string
+                      etag:
+                        type: string
+                  skills:
+                    type: array
+                    items:
+                      type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  supported_bindings:
+                    type: array
+                    items:
+                      type: string
+                  visibility:
+                    type: string
+                    enum:
+                      - public
+                      - restricted
+                  ttl_seconds:
+                    type: number
+                  updated_at:
+                    format: date-time
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - pending_verification
+                      - active
+                      - inactive
+                      - invalid
+                  facts_ref:
+                    anyOf:
+                      - additionalProperties: false
+                        type: object
+                        required:
+                          - type
+                          - url
+                        properties:
+                          type:
+                            anyOf:
+                              - const: public_url
+                                type: string
+                              - const: brokered_url
+                                type: string
+                          url:
+                            format: uri
+                            type: string
+                      - type: "null"
+        "400":
+          description: Response for status 400
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Response for status 403
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Response for status 404
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "501":
+          description: Response for status 501
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+      operationId: getV1AgentsByAgentId
+  /v1/agents/search:
+    post:
+      summary: Search discoverable agents
+      tags:
+        - Discovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  additionalProperties: false
+                  type: object
+                  properties:
+                    text:
+                      type: string
+                    skills:
+                      type: array
+                      items:
+                        type: string
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                    provider:
+                      type: string
+                    visibility:
+                      type: string
+                      enum:
+                        - public
+                        - restricted
+                    supported_bindings:
+                      type: array
+                      items:
+                        type: string
+                    page_size:
+                      minimum: 1
+                      maximum: 100
+                      default: 10
+                      anyOf:
+                        - format: numeric
+                          default: 0
+                          type: string
+                        - minimum: 1
+                          maximum: 100
+                          default: 10
+                          type: number
+                    page_token:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+          application/x-www-form-urlencoded:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  additionalProperties: false
+                  type: object
+                  properties:
+                    text:
+                      type: string
+                    skills:
+                      type: array
+                      items:
+                        type: string
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                    provider:
+                      type: string
+                    visibility:
+                      type: string
+                      enum:
+                        - public
+                        - restricted
+                    supported_bindings:
+                      type: array
+                      items:
+                        type: string
+                    page_size:
+                      minimum: 1
+                      maximum: 100
+                      default: 10
+                      anyOf:
+                        - format: numeric
+                          default: 0
+                          type: string
+                        - minimum: 1
+                          maximum: 100
+                          default: 10
+                          type: number
+                    page_token:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  additionalProperties: false
+                  type: object
+                  properties:
+                    text:
+                      type: string
+                    skills:
+                      type: array
+                      items:
+                        type: string
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                    provider:
+                      type: string
+                    visibility:
+                      type: string
+                      enum:
+                        - public
+                        - restricted
+                    supported_bindings:
+                      type: array
+                      items:
+                        type: string
+                    page_size:
+                      minimum: 1
+                      maximum: 100
+                      default: 10
+                      anyOf:
+                        - format: numeric
+                          default: 0
+                          type: string
+                        - minimum: 1
+                          maximum: 100
+                          default: 10
+                          type: number
+                    page_token:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+      responses:
+        "200":
+          description: Response for status 200
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                type: object
+                required:
+                  - results
+                  - next_page_token
+                properties:
+                  results:
+                    type: array
+                    items:
+                      additionalProperties: false
+                      type: object
+                      required:
+                        - agent_id
+                        - display_name
+                        - agent_card_ref
+                        - skills
+                        - tags
+                        - supported_bindings
+                        - visibility
+                        - ttl_seconds
+                        - updated_at
+                        - status
+                      properties:
+                        agent_id:
+                          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$
+                          type: string
+                        display_name:
+                          type: string
+                        provider:
+                          type: string
+                        agent_card_ref:
+                          additionalProperties: false
+                          type: object
+                          required:
+                            - source_url
+                            - access_url
+                            - access_mode
+                            - last_validated_at
+                          properties:
+                            source_url:
+                              format: uri
+                              type: string
+                            access_url:
+                              format: uri
+                              type: string
+                            access_mode:
+                              type: string
+                              enum:
+                                - public
+                                - protected
+                            last_validated_at:
+                              format: date-time
+                              type: string
+                            etag:
+                              type: string
+                        skills:
+                          type: array
+                          items:
+                            type: string
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        supported_bindings:
+                          type: array
+                          items:
+                            type: string
+                        visibility:
+                          type: string
+                          enum:
+                            - public
+                            - restricted
+                        ttl_seconds:
+                          type: number
+                        updated_at:
+                          format: date-time
+                          type: string
+                        status:
+                          type: string
+                          enum:
+                            - pending_verification
+                            - active
+                            - inactive
+                            - invalid
+                        facts_ref:
+                          anyOf:
+                            - additionalProperties: false
+                              type: object
+                              required:
+                                - type
+                                - url
+                              properties:
+                                type:
+                                  anyOf:
+                                    - const: public_url
+                                      type: string
+                                    - const: brokered_url
+                                      type: string
+                                url:
+                                  format: uri
+                                  type: string
+                            - type: "null"
+                  next_page_token:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+        "400":
+          description: Response for status 400
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Response for status 401
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "501":
+          description: Response for status 501
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+      operationId: postV1AgentsSearch
+components:
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - retryable
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            retryable:
+              type: boolean
+            details: {}
+      $id: "#/components/schemas/ErrorEnvelope"
