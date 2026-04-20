@@ -13,11 +13,13 @@ export interface PublisherContext {
   isAuthenticated: boolean;
 }
 
+export const appErrorDetailsSchema = t.Object({}, { additionalProperties: true });
+
 export const appErrorSchema = t.Object({
   code: t.String(),
   message: t.String(),
   retryable: t.Boolean(),
-  details: t.Optional(t.Unknown()),
+  details: appErrorDetailsSchema,
 });
 
 export const errorEnvelopeSchema = t.Object({

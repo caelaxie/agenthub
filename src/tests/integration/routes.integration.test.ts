@@ -55,6 +55,38 @@ describe("route validation and publication behavior", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error.code).toBe("invalid_request_body");
+    expect(payload.error.details).toBeObject();
+  });
+
+  it("returns structured validation details for invalid facts_ref", async () => {
+    const app = buildApp();
+    const response = await app.handle(
+      new Request("http://localhost/v1/publish/agents/acme.travel-planner", {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          agent_card_url: "https://travel.example.com/.well-known/agent-card.json",
+          visibility: "public",
+          facts_ref: {
+            type: "string",
+            url: "https://localhost:8000/foo/bar",
+          },
+          summary_overrides: {
+            provider: "xxx",
+          },
+        }),
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe("invalid_request_body");
+    expect(payload.error.details).toBeObject();
+    expect(payload.error.details.property).toBe("/facts_ref");
+    expect(payload.error.details.summary).toContain("facts_ref");
+    expect(payload.error.details.cause).toBeUndefined();
   });
 
   it("rejects non-https agent card urls", async () => {

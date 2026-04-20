@@ -266,6 +266,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -273,7 +274,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Response for status 401
@@ -290,6 +294,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -297,7 +302,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "403":
           description: Response for status 403
@@ -314,6 +322,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -321,7 +330,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Response for status 404
@@ -338,6 +350,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -345,7 +358,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "409":
           description: Response for status 409
@@ -362,6 +378,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -369,7 +386,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "422":
           description: Response for status 422
@@ -386,6 +406,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -393,7 +414,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "502":
           description: Response for status 502
@@ -410,6 +434,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -417,7 +442,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
       operationId: putV1PublishAgentsByAgentId
     get:
@@ -580,6 +608,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -587,7 +616,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Response for status 401
@@ -604,6 +636,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -611,7 +644,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "403":
           description: Response for status 403
@@ -628,6 +664,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -635,7 +672,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Response for status 404
@@ -652,6 +692,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -659,7 +700,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
       operationId: getV1PublishAgentsByAgentId
   /v1/publish/agents/{agentId}/deactivate:
@@ -707,6 +751,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -714,7 +759,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Response for status 401
@@ -731,6 +779,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -738,7 +787,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "403":
           description: Response for status 403
@@ -755,6 +807,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -762,7 +815,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Response for status 404
@@ -779,6 +835,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -786,7 +843,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
       operationId: postV1PublishAgentsByAgentIdDeactivate
   /v1/publish/agents/{agentId}/verify-domain:
@@ -871,6 +931,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -878,7 +939,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Response for status 401
@@ -895,6 +959,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -902,7 +967,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "403":
           description: Response for status 403
@@ -919,6 +987,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -926,7 +995,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Response for status 404
@@ -943,6 +1015,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -950,7 +1023,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "409":
           description: Response for status 409
@@ -967,6 +1043,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -974,7 +1051,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "501":
           description: Response for status 501
@@ -991,6 +1071,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -998,7 +1079,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
       operationId: postV1PublishAgentsByAgentIdVerify-domain
   /v1/agents/{agentId}:
@@ -1127,6 +1211,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -1134,7 +1219,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "403":
           description: Response for status 403
@@ -1151,6 +1239,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -1158,7 +1247,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Response for status 404
@@ -1175,6 +1267,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -1182,7 +1275,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "501":
           description: Response for status 501
@@ -1199,6 +1295,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -1206,7 +1303,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
       operationId: getV1AgentsByAgentId
   /v1/agents/search:
@@ -1488,6 +1588,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -1495,7 +1596,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Response for status 401
@@ -1512,6 +1616,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -1519,7 +1624,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
         "501":
           description: Response for status 501
@@ -1536,6 +1644,7 @@ paths:
                       - code
                       - message
                       - retryable
+                      - details
                     properties:
                       code:
                         type: string
@@ -1543,7 +1652,10 @@ paths:
                         type: string
                       retryable:
                         type: boolean
-                      details: {}
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
       operationId: postV1AgentsSearch
 components:
@@ -1559,6 +1671,7 @@ components:
             - code
             - message
             - retryable
+            - details
           properties:
             code:
               type: string
@@ -1566,5 +1679,8 @@ components:
               type: string
             retryable:
               type: boolean
-            details: {}
+            details:
+              additionalProperties: true
+              type: object
+              properties: {}
       $id: "#/components/schemas/ErrorEnvelope"

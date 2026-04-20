@@ -1,5 +1,17 @@
 import type { ErrorEnvelope } from "../types/api";
 
+const normalizeErrorDetails = (details: unknown): Record<string, unknown> => {
+  if (details && typeof details === "object" && !Array.isArray(details)) {
+    return { ...(details as Record<string, unknown>) };
+  }
+
+  if (details === undefined || details === null) {
+    return {};
+  }
+
+  return { value: details };
+};
+
 export interface AppErrorOptions {
   status: number;
   code: string;
@@ -12,7 +24,7 @@ export class AppError extends Error {
   readonly status: number;
   readonly code: string;
   readonly retryable: boolean;
-  readonly details?: unknown;
+  readonly details: Record<string, unknown>;
 
   constructor(options: AppErrorOptions) {
     super(options.message);
@@ -20,7 +32,7 @@ export class AppError extends Error {
     this.status = options.status;
     this.code = options.code;
     this.retryable = options.retryable ?? false;
-    this.details = options.details;
+    this.details = normalizeErrorDetails(options.details);
   }
 
   toResponse(): ErrorEnvelope {

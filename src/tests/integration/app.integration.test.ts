@@ -32,5 +32,10 @@ describe("app integration", () => {
         "application/json"
       ].schema.properties.publication.properties.agent_card_url.pattern,
     ).toBe("^https://");
+    expect(
+      payload.paths["/v1/publish/agents/{agentId}"].put.responses["400"].content[
+        "application/json"
+      ].schema.properties.error.properties.details.type,
+    ).toBe("object");
   });
 });

@@ -26,35 +26,47 @@ const mapUnknownError = (error: unknown) => {
   );
 };
 
-const readValidationContext = (error: unknown) => {
+const readValidationDetails = (error: unknown): Record<string, unknown> => {
   if (!error || typeof error !== "object") {
-    return null;
+    return {};
   }
 
-  const direct = error as {
-    on?: string;
-    property?: string;
-    message?: string;
-  };
+  const direct = error as Record<string, unknown>;
+  const directMessage =
+    typeof direct.message === "string" ? direct.message : undefined;
 
-  if (direct.on || direct.property) {
-    return direct;
+  if (directMessage) {
+    try {
+      const parsed = JSON.parse(directMessage) as unknown;
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return { ...(parsed as Record<string, unknown>) };
+      }
+    } catch {
+      return { cause: directMessage };
+    }
   }
 
-  if (!direct.message) {
-    return null;
+  const details: Record<string, unknown> = {};
+
+  for (const key of [
+    "type",
+    "on",
+    "property",
+    "message",
+    "summary",
+    "expected",
+    "found",
+    "errors",
+  ]) {
+    const value = direct[key];
+
+    if (value !== undefined) {
+      details[key] = value;
+    }
   }
 
-  try {
-    const parsed = JSON.parse(direct.message) as {
-      on?: string;
-      property?: string;
-    };
-
-    return parsed;
-  } catch {
-    return null;
-  }
+  return details;
 };
 
 export interface AppDependencies {
@@ -76,16 +88,16 @@ export const buildApp = (dependencies: AppDependencies = {}) =>
     .use(discoveryPlugin)
     .onError(({ code, error, set }) => {
       if (code === "VALIDATION") {
-        const validationErrorContext = readValidationContext(error);
+        const validationDetails = readValidationDetails(error);
         const isAgentIdError =
-          validationErrorContext?.on === "params" &&
-          validationErrorContext?.property === "/agentId";
+          validationDetails.on === "params" &&
+          validationDetails.property === "/agentId";
         const validationError = HttpError.badRequest(
           isAgentIdError ? "invalid_agent_id" : "invalid_request_body",
           isAgentIdError
             ? "The provided agent_id is invalid."
             : "The request failed validation.",
-          { cause: error.message },
+          validationDetails,
         );
 
         set.status = validationError.status;
