@@ -46,6 +46,9 @@ Start the app:
 bun run dev
 ```
 
+For a step-by-step local QA guide covering Postman requests, happy paths, and
+known placeholder routes, see [`docs/manual-testing.md`](docs/manual-testing.md).
+
 ## Docker
 
 Build the production image:
