@@ -16,6 +16,13 @@ Start local dependencies:
 docker compose up -d
 ```
 
+Copy the default local environment file if you do not already have a working
+`.env` for this repo:
+
+```bash
+cp .env.example .env
+```
+
 Use the default local environment from `.env.example`:
 
 ```bash
