@@ -48,6 +48,49 @@ bun run dev
 
 The service should listen on `http://localhost:3000`.
 
+## Local Dummy Agent Card Server
+
+For a reliable local publish flow, serve a dummy Agent Card over HTTPS from this
+repo instead of pointing `agent_card_url` at an external site.
+
+Generate a trusted local certificate with `mkcert`:
+
+```bash
+mkdir -p .certs
+mkcert -install
+mkcert -cert-file .certs/localhost.pem -key-file .certs/localhost-key.pem localhost 127.0.0.1 ::1
+```
+
+Start the dummy server:
+
+```bash
+bun run dev:dummy-agent-card
+```
+
+When you use the dummy HTTPS Agent Card server, start the API with the local
+mkcert CA wired into Bun:
+
+```bash
+bun run dev:with-local-ca
+```
+
+This is the recommended local publish-testing flow. The plain `bun run dev`
+command is still fine for routes that do not fetch a local HTTPS Agent Card.
+
+Default URLs:
+
+- Agent Card: `https://localhost:8443/.well-known/agent-card.json`
+- Interface endpoint: `https://localhost:8443/a2a`
+
+The script exits with setup instructions if the TLS files are missing. You can
+override the defaults with:
+
+- `DUMMY_AGENT_CARD_PORT`
+- `DUMMY_AGENT_CARD_HOST`
+- `DUMMY_AGENT_CARD_BIND_HOST`
+- `DUMMY_AGENT_CARD_CERT_PATH`
+- `DUMMY_AGENT_CARD_KEY_PATH`
+
 ## Postman Setup
 
 Import the live OpenAPI document:
@@ -65,7 +108,7 @@ Recommended Postman environment variables:
 | `publisherToken` | `Bearer publisher-token` |
 | `otherPublisherToken` | `Bearer other-token` |
 | `agentId` | `acme.travel-planner` |
-| `agentCardUrl` | `https://travel.example.com/.well-known/agent-card.json` |
+| `agentCardUrl` | `https://localhost:8443/.well-known/agent-card.json` |
 | `crossOriginAgentCardUrl` | `https://other.example.com/.well-known/agent-card.json` |
 
 For publication routes, send:
@@ -145,6 +188,8 @@ Expect:
 Important note:
 
 - `agent_card_url` must be reachable over HTTPS and return a valid Agent Card.
+- If you are using the local dummy Agent Card server, run the API with
+  `bun run dev:with-local-ca`.
 - If the remote endpoint is unavailable, this request will fail with `502`.
 
 ### Re-publish Same Origin

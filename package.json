@@ -3,6 +3,7 @@
   "version": "1.0.50",
   "scripts": {
     "dev": "bun --watch run src/index.ts",
+    "dev:with-local-ca": "NODE_EXTRA_CA_CERTS=\"$(mkcert -CAROOT)/rootCA.pem\" bun --watch run src/index.ts",
     "start": "bun run src/index.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
@@ -10,6 +11,7 @@
     "docs:db-schema:check": "bun run scripts/generate-db-schema-docs.ts --check",
     "docs:openapi": "bun run scripts/generate-openapi-docs.ts",
     "docs:openapi:check": "bun run scripts/generate-openapi-docs.ts --check",
+    "dev:dummy-agent-card": "bun run scripts/serve-dummy-agent-card.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
