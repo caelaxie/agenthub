@@ -61,6 +61,10 @@ mkcert -install
 mkcert -cert-file .certs/localhost.pem -key-file .certs/localhost-key.pem localhost 127.0.0.1 ::1
 ```
 
+`mkcert -install` is usually a one-time setup per machine. For later test runs,
+you normally only need to regenerate the project-local cert and key files if
+they are missing.
+
 Start the dummy server:
 
 ```bash
