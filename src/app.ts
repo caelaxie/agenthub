@@ -8,7 +8,10 @@ import { corsPlugin } from "./plugins/cors";
 import { docsPlugin } from "./plugins/docs";
 import { loggerPlugin } from "./plugins/logger";
 import { healthRoute } from "./modules/health/health.route";
-import { publicationPlugin } from "./modules/publication/publication.plugin";
+import {
+  createPublicationPlugin,
+} from "./modules/publication/publication.plugin";
+import type { PublicationService } from "./modules/publication/publication.service";
 import { verificationPlugin } from "./modules/verification/verification.plugin";
 import { discoveryPlugin } from "./modules/discovery/discovery.plugin";
 
@@ -23,38 +26,54 @@ const mapUnknownError = (error: unknown) => {
   );
 };
 
-const readValidationContext = (error: unknown) => {
+const readValidationDetails = (error: unknown): Record<string, unknown> => {
   if (!error || typeof error !== "object") {
-    return null;
+    return {};
   }
 
-  const direct = error as {
-    on?: string;
-    property?: string;
-    message?: string;
-  };
+  const direct = error as Record<string, unknown>;
+  const directMessage =
+    typeof direct.message === "string" ? direct.message : undefined;
 
-  if (direct.on || direct.property) {
-    return direct;
+  if (directMessage) {
+    try {
+      const parsed = JSON.parse(directMessage) as unknown;
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return { ...(parsed as Record<string, unknown>) };
+      }
+    } catch {
+      return { cause: directMessage };
+    }
   }
 
-  if (!direct.message) {
-    return null;
+  const details: Record<string, unknown> = {};
+
+  for (const key of [
+    "type",
+    "on",
+    "property",
+    "message",
+    "summary",
+    "expected",
+    "found",
+    "errors",
+  ]) {
+    const value = direct[key];
+
+    if (value !== undefined) {
+      details[key] = value;
+    }
   }
 
-  try {
-    const parsed = JSON.parse(direct.message) as {
-      on?: string;
-      property?: string;
-    };
-
-    return parsed;
-  } catch {
-    return null;
-  }
+  return details;
 };
 
-export const buildApp = () =>
+export interface AppDependencies {
+  publicationService?: PublicationService;
+}
+
+export const buildApp = (dependencies: AppDependencies = {}) =>
   new Elysia()
     .model({
       ErrorEnvelope: errorEnvelopeSchema,
@@ -64,21 +83,21 @@ export const buildApp = () =>
     .use(docsPlugin)
     .use(authPlugin)
     .use(healthRoute)
-    .use(publicationPlugin)
+    .use(createPublicationPlugin(dependencies.publicationService))
     .use(verificationPlugin)
     .use(discoveryPlugin)
     .onError(({ code, error, set }) => {
       if (code === "VALIDATION") {
-        const validationErrorContext = readValidationContext(error);
+        const validationDetails = readValidationDetails(error);
         const isAgentIdError =
-          validationErrorContext?.on === "params" &&
-          validationErrorContext?.property === "/agentId";
+          validationDetails.on === "params" &&
+          validationDetails.property === "/agentId";
         const validationError = HttpError.badRequest(
           isAgentIdError ? "invalid_agent_id" : "invalid_request_body",
           isAgentIdError
             ? "The provided agent_id is invalid."
             : "The request failed validation.",
-          { cause: error.message },
+          validationDetails,
         );
 
         set.status = validationError.status;

@@ -8,9 +8,8 @@ export const buildPublisherContext = (request: Request): PublisherContext => {
   const authorization = request.headers.get("authorization");
 
   return {
-    subject: headerSubject ?? env.DEV_PUBLISHER_SUBJECT,
-    isAuthenticated:
-      Boolean(headerSubject || authorization) || env.NODE_ENV !== "production",
+    subject: headerSubject ?? authorization ?? env.DEV_PUBLISHER_SUBJECT,
+    isAuthenticated: Boolean(headerSubject || authorization),
   };
 };
 

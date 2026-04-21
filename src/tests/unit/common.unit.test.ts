@@ -18,7 +18,7 @@ describe("common errors", () => {
         code: "duplicate_publication_conflict",
         message: "Duplicate publication.",
         retryable: false,
-        details: undefined,
+        details: {},
       },
     });
   });

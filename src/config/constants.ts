@@ -9,5 +9,7 @@ export const DEFAULT_LOG_LEVEL = "debug";
 export const DEFAULT_DEV_PUBLISHER_SUBJECT = "publisher:local-dev";
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_SIZE = 100;
+export const DEFAULT_SNAPSHOT_TTL_SECONDS = 300;
+export const VERIFICATION_CHALLENGE_TTL_MINUTES = 30;
 export const AGENT_ID_PATTERN =
   "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)+$";

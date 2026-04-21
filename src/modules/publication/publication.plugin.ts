@@ -4,10 +4,15 @@ import { createPublicationRoutes } from "./publication.route";
 import { DrizzlePublicationRepository } from "./publication.repo";
 import { PublicationService } from "./publication.service";
 
-const publicationRepo = new DrizzlePublicationRepository();
-const publicationService = new PublicationService(publicationRepo);
+export const createPublicationService = () =>
+  new PublicationService(new DrizzlePublicationRepository());
 
-export const publicationPlugin = new Elysia({
-  name: "publication-plugin",
-  prefix: "/v1/publish/agents",
-}).use(createPublicationRoutes(publicationService));
+export const createPublicationPlugin = (
+  service: PublicationService = createPublicationService(),
+) =>
+  new Elysia({
+    name: "publication-plugin",
+    prefix: "/v1/publish/agents",
+  }).use(createPublicationRoutes(service));
+
+export const publicationPlugin = createPublicationPlugin();
