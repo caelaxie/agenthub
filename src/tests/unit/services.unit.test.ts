@@ -7,19 +7,16 @@ import {
 } from "../../modules/publication/publication.service";
 import { VerificationService } from "../../modules/verification/verification.service";
 import { DiscoveryService } from "../../modules/discovery/discovery.service";
-import type { PublisherContext, SearchEnvelope, VerifyDomainRequest } from "../../common/types/api";
+import type { SearchEnvelope, VerifyDomainRequest } from "../../common/types/api";
 import {
   createJsonFetchResponse,
+  createTextFetchResponse,
   createStoredRecord,
   InMemoryPublicationRepository,
+  testPublisher,
   validAgentCard,
   validPublicationBody,
 } from "../helpers/publication-test-helpers";
-
-const publisher: PublisherContext = {
-  subject: "publisher:test",
-  isAuthenticated: true,
-};
 
 const verifyPayload: VerifyDomainRequest = {
   method: "well_known_token",
@@ -46,7 +43,7 @@ describe("publication service", () => {
     const result = await service.publishAgent(
       "acme.travel-planner",
       validPublicationBody,
-      publisher,
+      testPublisher,
     );
 
     expect(result.created).toBe(true);
@@ -72,7 +69,7 @@ describe("publication service", () => {
     const service = new PublicationService(repo, fetchStub);
 
     await expect(
-      service.getPublication("acme.travel-planner", publisher),
+      service.getPublication("acme.travel-planner", testPublisher),
     ).rejects.toMatchObject({
       code: "publication_forbidden",
       status: 403,
@@ -100,8 +97,7 @@ describe("publication service", () => {
     });
   });
 
-  it("keeps verification and discovery services as typed placeholders", async () => {
-    const verificationService = new VerificationService();
+  it("keeps discovery service as a typed placeholder", async () => {
     const discoveryService = new DiscoveryService({
       async getByAgentId() {
         return null;
@@ -114,30 +110,164 @@ describe("publication service", () => {
       },
     });
 
-    await expect(
-      verificationService.verifyDomain(
-        "acme.travel-planner",
-        verifyPayload,
-        publisher,
-      ),
-    ).rejects.toBeInstanceOf(HttpError);
-
     await expect(discoveryService.searchAgents(searchPayload)).rejects.toBeInstanceOf(
       HttpError,
     );
   });
 });
 
-describe("remaining service placeholders", () => {
-  it("verification service throws a typed 501", async () => {
-    const service = new VerificationService();
+describe("verification service", () => {
+  let repo: InMemoryPublicationRepository;
 
-    await expect(
-      service.verifyDomain("acme.travel-planner", verifyPayload, publisher),
-    ).rejects.toBeInstanceOf(HttpError);
+  beforeEach(() => {
+    repo = new InMemoryPublicationRepository();
   });
 
-  it("discovery service throws a typed 501", async () => {
+  it("activates a pending record after exact same-origin proof and claims the namespace", async () => {
+    repo.seed(createStoredRecord());
+    const service = new VerificationService(
+      repo,
+      async () =>
+        createTextFetchResponse(
+          "agent_id=acme.travel-planner\ntoken=ahv1_testtoken",
+        ),
+    );
+
+    const result = await service.verifyDomain(
+      "acme.travel-planner",
+      verifyPayload,
+      testPublisher,
+    );
+
+    expect(result.status).toBe("active");
+    expect(result.verified_at).toBeString();
+
+    const stored = await repo.getByAgentId("acme.travel-planner");
+    expect(stored?.status).toBe("active");
+    expect(stored?.namespaceOwnerSubject).toBe("publisher:test");
+    expect(stored?.pendingOwnerSubject).toBeNull();
+    expect(stored?.challenge).toBeUndefined();
+    expect(stored?.verifiedAt).toBeString();
+  });
+
+  it("rejects expired challenges", async () => {
+    repo.seed(
+      createStoredRecord({
+        challenge: {
+          method: "well_known_token",
+          url: "https://travel.example.com/.well-known/agenthub-verification/acme.travel-planner",
+          token: "ahv1_testtoken",
+          expires_at: new Date(Date.now() - 60_000).toISOString(),
+        },
+      }),
+    );
+    const service = new VerificationService(repo, async () =>
+      createTextFetchResponse("unexpected"),
+    );
+
+    await expect(
+      service.verifyDomain(
+        "acme.travel-planner",
+        verifyPayload,
+        testPublisher,
+      ),
+    ).rejects.toMatchObject({
+      code: "verification_challenge_expired",
+      status: 409,
+    });
+  });
+
+  it("rejects wrong verification bodies", async () => {
+    repo.seed(createStoredRecord());
+    const service = new VerificationService(repo, async () =>
+      createTextFetchResponse("agent_id=acme.travel-planner\ntoken=wrong"),
+    );
+
+    await expect(
+      service.verifyDomain(
+        "acme.travel-planner",
+        verifyPayload,
+        testPublisher,
+      ),
+    ).rejects.toMatchObject({
+      code: "domain_verification_failed",
+      status: 403,
+    });
+  });
+
+  it("rejects missing verification files", async () => {
+    repo.seed(createStoredRecord());
+    const service = new VerificationService(
+      repo,
+      async () => new Response("not found", { status: 404 }),
+    );
+
+    await expect(
+      service.verifyDomain(
+        "acme.travel-planner",
+        verifyPayload,
+        testPublisher,
+      ),
+    ).rejects.toMatchObject({
+      code: "domain_verification_failed",
+      status: 403,
+    });
+  });
+
+  it("rejects redirects that change origin", async () => {
+    repo.seed(createStoredRecord());
+    const service = new VerificationService(
+      repo,
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: {
+            location:
+              "https://other.example.com/.well-known/agenthub-verification/acme.travel-planner",
+          },
+        }),
+    );
+
+    await expect(
+      service.verifyDomain(
+        "acme.travel-planner",
+        verifyPayload,
+        testPublisher,
+      ),
+    ).rejects.toMatchObject({
+      code: "domain_verification_failed",
+      status: 403,
+    });
+  });
+
+  it("rejects later verification attempts by a different subject", async () => {
+    repo.seed(
+      createStoredRecord({
+        namespaceOwnerSubject: "publisher:claimed-owner",
+        pendingOwnerSubject: null,
+      }),
+    );
+    const service = new VerificationService(
+      repo,
+      async () =>
+        createTextFetchResponse(
+          "agent_id=acme.travel-planner\ntoken=ahv1_testtoken",
+        ),
+    );
+
+    await expect(
+      service.verifyDomain(
+        "acme.travel-planner",
+        verifyPayload,
+        testPublisher,
+      ),
+    ).rejects.toMatchObject({
+      code: "publication_forbidden",
+      status: 403,
+    });
+  });
+
+  it("keeps discovery service as a typed placeholder", async () => {
     const service = new DiscoveryService({
       async getByAgentId() {
         return null;

@@ -18,6 +18,11 @@ export interface PublicationRepository {
   getNamespaceOwner(namespace: string): Promise<string | null>;
   findActiveBySourceUrl(sourceUrl: string): Promise<{ agentId: string } | null>;
   upsert(record: UpsertPublicationRecord): Promise<void>;
+  completeVerification(
+    agentId: string,
+    publisherSubject: string,
+    verifiedAt: string,
+  ): Promise<void>;
   deactivate(agentId: string): Promise<void>;
 }
 
@@ -237,6 +242,66 @@ export class DrizzlePublicationRepository implements PublicationRepository {
             refreshedAt: timestamp,
           },
         });
+    });
+  }
+
+  async completeVerification(
+    agentId: string,
+    publisherSubject: string,
+    verifiedAt: string,
+  ): Promise<void> {
+    const db = requireDb();
+    const verifiedTimestamp = new Date(verifiedAt);
+
+    await db.transaction(async (tx) => {
+      const [publication] = await tx
+        .select({ namespace: publicationsTable.namespace })
+        .from(publicationsTable)
+        .where(eq(publicationsTable.agentId, agentId))
+        .limit(1);
+
+      if (!publication) {
+        throw HttpError.notFound(
+          "agent_not_found",
+          `No publication found for agent_id '${agentId}'.`,
+        );
+      }
+
+      await tx
+        .insert(namespacesTable)
+        .values({
+          namespace: publication.namespace,
+          ownerSubject: publisherSubject,
+        })
+        .onConflictDoNothing();
+
+      const [namespaceRow] = await tx
+        .select({ ownerSubject: namespacesTable.ownerSubject })
+        .from(namespacesTable)
+        .where(eq(namespacesTable.namespace, publication.namespace))
+        .limit(1);
+
+      if (!namespaceRow || namespaceRow.ownerSubject !== publisherSubject) {
+        throw HttpError.forbidden(
+          "publication_forbidden",
+          "The caller does not own this publication record.",
+        );
+      }
+
+      await tx
+        .update(publicationsTable)
+        .set({
+          status: "active",
+          pendingOwnerSubject: null,
+          verifiedAt: verifiedTimestamp,
+          lastError: null,
+          updatedAt: verifiedTimestamp,
+        })
+        .where(eq(publicationsTable.agentId, agentId));
+
+      await tx
+        .delete(verificationChallengesTable)
+        .where(eq(verificationChallengesTable.agentId, agentId));
     });
   }
 

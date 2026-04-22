@@ -398,9 +398,6 @@ Expect:
 
 ## Discovery and Verification Notes
 
-These routes are not fully implemented yet and should currently be treated as
-placeholder behavior during manual testing.
-
 ### Domain Verification
 
 Request:
@@ -419,10 +416,21 @@ Body:
 }
 ```
 
-Current expectation:
+Successful verification expectations:
 
-- `501 Not Implemented`
-- `error.code = "domain_verification_not_implemented"`
+- `200 OK`
+- response status becomes `active`
+- response includes `verified_at`
+- owner-only `GET /v1/publish/agents/{{agentId}}` no longer includes `challenge`
+
+Failure cases to verify:
+
+- expired or missing active challenge returns `409`
+- `error.code = "verification_challenge_expired"`
+- wrong body, missing file, or cross-origin redirect returns `403`
+- `error.code = "domain_verification_failed"`
+- wrong owner subject returns `403`
+- `error.code = "publication_forbidden"`
 
 ### Discovery Search
 

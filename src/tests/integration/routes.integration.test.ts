@@ -5,8 +5,10 @@ import {
   PublicationService,
   type FetchLike,
 } from "../../modules/publication/publication.service";
+import { VerificationService } from "../../modules/verification/verification.service";
 import {
   createJsonFetchResponse,
+  createTextFetchResponse,
   createStoredRecord,
   InMemoryPublicationRepository,
   validAgentCard,
@@ -26,6 +28,11 @@ describe("route validation and publication behavior", () => {
         },
       });
   });
+
+  const buildVerificationApp = (verificationFetch: FetchLike) =>
+    buildApp({
+      verificationService: new VerificationService(repo, verificationFetch),
+    });
 
   it("rejects invalid agent ids", async () => {
     const app = buildApp();
@@ -130,6 +137,215 @@ describe("route validation and publication behavior", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error.code).toBe("invalid_request_body");
+  });
+
+  it("verifies a pending publication and returns active", async () => {
+    repo.seed(createStoredRecord());
+    const app = buildVerificationApp(async () =>
+      createTextFetchResponse(
+        "agent_id=acme.travel-planner\ntoken=ahv1_testtoken\n",
+      ),
+    );
+    const response = await app.handle(
+      new Request(
+        "http://localhost/v1/publish/agents/acme.travel-planner/verify-domain",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "publisher:test",
+          },
+          body: JSON.stringify({ method: "well_known_token" }),
+        },
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.status).toBe("active");
+    expect(payload.verified_at).toBeString();
+
+    const stored = await repo.getByAgentId("acme.travel-planner");
+    expect(stored?.status).toBe("active");
+    expect(stored?.challenge).toBeUndefined();
+    expect(stored?.namespaceOwnerSubject).toBe("publisher:test");
+  });
+
+  it("rejects expired verification challenges", async () => {
+    repo.seed(
+      createStoredRecord({
+        challenge: {
+          method: "well_known_token",
+          url: "https://travel.example.com/.well-known/agenthub-verification/acme.travel-planner",
+          token: "ahv1_testtoken",
+          expires_at: new Date(Date.now() - 60_000).toISOString(),
+        },
+      }),
+    );
+    const app = buildVerificationApp(async () =>
+      createTextFetchResponse("unexpected"),
+    );
+    const response = await app.handle(
+      new Request(
+        "http://localhost/v1/publish/agents/acme.travel-planner/verify-domain",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "publisher:test",
+          },
+          body: JSON.stringify({ method: "well_known_token" }),
+        },
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(payload.error.code).toBe("verification_challenge_expired");
+  });
+
+  it("rejects wrong verification bodies", async () => {
+    repo.seed(createStoredRecord());
+    const app = buildVerificationApp(async () =>
+      createTextFetchResponse("agent_id=acme.travel-planner\ntoken=wrong"),
+    );
+    const response = await app.handle(
+      new Request(
+        "http://localhost/v1/publish/agents/acme.travel-planner/verify-domain",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "publisher:test",
+          },
+          body: JSON.stringify({ method: "well_known_token" }),
+        },
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(payload.error.code).toBe("domain_verification_failed");
+  });
+
+  it("rejects missing verification files", async () => {
+    repo.seed(createStoredRecord());
+    const app = buildVerificationApp(
+      async () => new Response("not found", { status: 404 }),
+    );
+    const response = await app.handle(
+      new Request(
+        "http://localhost/v1/publish/agents/acme.travel-planner/verify-domain",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "publisher:test",
+          },
+          body: JSON.stringify({ method: "well_known_token" }),
+        },
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(payload.error.code).toBe("domain_verification_failed");
+  });
+
+  it("rejects redirects to a different origin", async () => {
+    repo.seed(createStoredRecord());
+    const app = buildVerificationApp(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: {
+            location:
+              "https://other.example.com/.well-known/agenthub-verification/acme.travel-planner",
+          },
+        }),
+    );
+    const response = await app.handle(
+      new Request(
+        "http://localhost/v1/publish/agents/acme.travel-planner/verify-domain",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "publisher:test",
+          },
+          body: JSON.stringify({ method: "well_known_token" }),
+        },
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(payload.error.code).toBe("domain_verification_failed");
+  });
+
+  it("rejects verify attempts from a different subject after namespace ownership is bound", async () => {
+    repo.seed(
+      createStoredRecord({
+        namespaceOwnerSubject: "publisher:claimed-owner",
+        pendingOwnerSubject: null,
+      }),
+    );
+    const app = buildVerificationApp(async () =>
+      createTextFetchResponse(
+        "agent_id=acme.travel-planner\ntoken=ahv1_testtoken",
+      ),
+    );
+    const response = await app.handle(
+      new Request(
+        "http://localhost/v1/publish/agents/acme.travel-planner/verify-domain",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "publisher:test",
+          },
+          body: JSON.stringify({ method: "well_known_token" }),
+        },
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(payload.error.code).toBe("publication_forbidden");
+  });
+
+  it("rejects already-active records as ineligible for verification", async () => {
+    repo.seed(
+      createStoredRecord({
+        status: "active",
+        challenge: undefined,
+        namespaceOwnerSubject: "publisher:test",
+        pendingOwnerSubject: null,
+        verifiedAt: new Date().toISOString(),
+      }),
+    );
+    const app = buildVerificationApp(async () =>
+      createTextFetchResponse(
+        "agent_id=acme.travel-planner\ntoken=ahv1_testtoken",
+      ),
+    );
+    const response = await app.handle(
+      new Request(
+        "http://localhost/v1/publish/agents/acme.travel-planner/verify-domain",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "publisher:test",
+          },
+          body: JSON.stringify({ method: "well_known_token" }),
+        },
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(payload.error.code).toBe("verification_challenge_expired");
   });
 
   it("publishes a valid agent and returns pending_verification", async () => {
