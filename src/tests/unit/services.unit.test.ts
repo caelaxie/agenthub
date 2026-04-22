@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 
-import { HttpError } from "../../common/errors/http-error";
 import {
   PublicationService,
   type FetchLike,
@@ -17,6 +16,10 @@ import {
   validAgentCard,
   validPublicationBody,
 } from "../helpers/publication-test-helpers";
+import {
+  createDiscoveryRecord,
+  InMemoryDiscoveryRepository,
+} from "../helpers/discovery-test-helpers";
 
 const verifyPayload: VerifyDomainRequest = {
   method: "well_known_token",
@@ -97,22 +100,131 @@ describe("publication service", () => {
     });
   });
 
-  it("keeps discovery service as a typed placeholder", async () => {
-    const discoveryService = new DiscoveryService({
-      async getByAgentId() {
-        return null;
-      },
-      async search() {
-        return {
-          results: [],
-          next_page_token: null,
-        };
-      },
+});
+
+describe("discovery service", () => {
+  it("returns a visible active public record by id", async () => {
+    const service = new DiscoveryService(
+      new InMemoryDiscoveryRepository([createDiscoveryRecord()]),
+    );
+
+    const record = await service.getAgentById("acme.travel-planner", {
+      subject: "anonymous",
+      isAuthenticated: false,
     });
 
-    await expect(discoveryService.searchAgents(searchPayload)).rejects.toBeInstanceOf(
-      HttpError,
+    expect(record.agent_id).toBe("acme.travel-planner");
+    expect(record.visibility).toBe("public");
+  });
+
+  it("rejects unauthenticated lookup of a restricted record", async () => {
+    const service = new DiscoveryService(
+      new InMemoryDiscoveryRepository([
+        createDiscoveryRecord({
+          agent_id: "acme.payroll",
+          visibility: "restricted",
+        }),
+      ]),
     );
+
+    await expect(
+      service.getAgentById("acme.payroll", {
+        subject: "anonymous",
+        isAuthenticated: false,
+      }),
+    ).rejects.toMatchObject({
+      code: "restricted_entry_forbidden",
+      status: 403,
+    });
+  });
+
+  it("allows authenticated callers to search public and restricted records by default", async () => {
+    const service = new DiscoveryService(
+      new InMemoryDiscoveryRepository([
+        createDiscoveryRecord({
+          agent_id: "acme.public-agent",
+          display_name: "Public Travel Agent",
+          tags: ["travel"],
+        }),
+        createDiscoveryRecord({
+          agent_id: "acme.restricted-agent",
+          display_name: "Restricted Travel Agent",
+          tags: ["travel"],
+          visibility: "restricted",
+        }),
+      ]),
+    );
+
+    const result = await service.searchAgents(searchPayload, testPublisher);
+
+    expect(result.results.map((record) => record.agent_id)).toEqual([
+      "acme.public-agent",
+      "acme.restricted-agent",
+    ]);
+  });
+
+  it("requires authentication for explicit restricted search", async () => {
+    const service = new DiscoveryService(new InMemoryDiscoveryRepository());
+
+    await expect(
+      service.searchAgents(
+        {
+          query: {
+            visibility: "restricted",
+          },
+        },
+        {
+          subject: "anonymous",
+          isAuthenticated: false,
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "restricted_search_requires_auth",
+      status: 401,
+    });
+  });
+
+  it("rejects mismatched page tokens", async () => {
+    const service = new DiscoveryService(
+      new InMemoryDiscoveryRepository([
+        createDiscoveryRecord({
+          agent_id: "acme.alpha",
+          display_name: "Travel Alpha",
+          tags: ["travel"],
+        }),
+        createDiscoveryRecord({
+          agent_id: "acme.beta",
+          display_name: "Travel Beta",
+          tags: ["travel"],
+        }),
+      ]),
+    );
+
+    const firstPage = await service.searchAgents(
+      {
+        query: {
+          text: "travel",
+          page_size: 1,
+        },
+      },
+      testPublisher,
+    );
+
+    await expect(
+      service.searchAgents(
+        {
+          query: {
+            text: "planner",
+            page_size: 1,
+            page_token: firstPage.next_page_token,
+          },
+        },
+        testPublisher,
+      ),
+    ).rejects.toMatchObject({
+      code: "invalid_page_token",
+      status: 400,
+    });
   });
 });
 
@@ -267,21 +379,4 @@ describe("verification service", () => {
     });
   });
 
-  it("keeps discovery service as a typed placeholder", async () => {
-    const service = new DiscoveryService({
-      async getByAgentId() {
-        return null;
-      },
-      async search() {
-        return {
-          results: [],
-          next_page_token: null,
-        };
-      },
-    });
-
-    await expect(service.searchAgents(searchPayload)).rejects.toBeInstanceOf(
-      HttpError,
-    );
-  });
 });
