@@ -9,7 +9,6 @@ dist
 build
 docker-compose.yml
 README.md
-openspec
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
