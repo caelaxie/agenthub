@@ -1,6 +1,12 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  createDummyAgentCardFetchHandler,
+  dummyVerificationAdminPath,
+  dummyVerificationPathPrefix,
+} from "./lib/dummy-agent-card-server";
+
 const REPO_ROOT = path.join(import.meta.dir, "..");
 const DEFAULT_CERT_PATH = path.join(REPO_ROOT, ".certs", "localhost.pem");
 const DEFAULT_KEY_PATH = path.join(REPO_ROOT, ".certs", "localhost-key.pem");
@@ -15,26 +21,7 @@ const certPath = process.env.DUMMY_AGENT_CARD_CERT_PATH ?? DEFAULT_CERT_PATH;
 const keyPath = process.env.DUMMY_AGENT_CARD_KEY_PATH ?? DEFAULT_KEY_PATH;
 
 const baseUrl = `https://${publicHost}:${port}`;
-const cardPath = "/.well-known/agent-card.json";
-const cardUrl = `${baseUrl}${cardPath}`;
-
-const cardPayload = {
-  name: "Local Dummy Agent",
-  provider: "AgentHub Manual Testing",
-  supportedInterfaces: [
-    {
-      url: `${baseUrl}/a2a`,
-      protocolBinding: "HTTP+JSON",
-      protocolVersion: "1.0",
-    },
-  ],
-  skills: [
-    {
-      id: "manual-test",
-      tags: ["Testing", "Local"],
-    },
-  ],
-};
+const cardUrl = `${baseUrl}/.well-known/agent-card.json`;
 
 const ensureTlsFiles = async () => {
   try {
@@ -64,34 +51,17 @@ const server = Bun.serve({
     cert: Bun.file(certPath),
     key: Bun.file(keyPath),
   },
-  fetch(request) {
-    const { pathname } = new URL(request.url);
-
-    if (pathname === cardPath) {
-      return Response.json(cardPayload, {
-        headers: {
-          "cache-control": "no-store",
-        },
-      });
-    }
-
-    if (pathname === "/a2a") {
-      return Response.json({
-        ok: true,
-        agent: cardPayload.name,
-      });
-    }
-
-    if (pathname === "/") {
-      return Response.json({
-        card_url: cardUrl,
-        supported_paths: [cardPath, "/a2a"],
-      });
-    }
-
-    return new Response("Not found", { status: 404 });
-  },
+  fetch: createDummyAgentCardFetchHandler({
+    baseUrl,
+    cardUrl,
+  }),
 });
 
 console.log(`Dummy Agent Card server listening on https://${publicHost}:${server.port}`);
 console.log(`Agent Card URL: ${cardUrl}`);
+console.log(
+  `Verification admin URL: https://${publicHost}:${server.port}${dummyVerificationAdminPath}`,
+);
+console.log(
+  `Verification path template: https://${publicHost}:${server.port}${dummyVerificationPathPrefix}{agent_id}`,
+);
