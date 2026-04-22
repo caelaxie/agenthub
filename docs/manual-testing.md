@@ -226,7 +226,7 @@ curl -sS \
   -H "Content-Type: application/json" \
   -d '{
     "query": {
-      "text": "travel"
+      "text": "local"
     }
   }'
 ```
@@ -236,6 +236,13 @@ Expect:
 - `200 OK`
 - results include `acme.travel-planner`
 - `next_page_token` is either `null` or a string
+
+Why this query:
+
+- the local dummy card currently indexes tokens such as `local`, `manual`, and
+  `test`
+- `travel` appears in the example `agent_id`, but free-text search does not use
+  `agent_id` tokens
 
 ## Core Checks
 
