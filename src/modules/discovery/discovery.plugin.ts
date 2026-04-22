@@ -4,15 +4,10 @@ import { createDiscoveryRoutes } from "./discovery.route";
 import { DrizzleDiscoveryRepository } from "./discovery.repo";
 import { DiscoveryService } from "./discovery.service";
 
-export const createDiscoveryService = () =>
-  new DiscoveryService(new DrizzleDiscoveryRepository());
+const discoveryRepo = new DrizzleDiscoveryRepository();
+const discoveryService = new DiscoveryService(discoveryRepo);
 
-export const createDiscoveryPlugin = (
-  service: DiscoveryService = createDiscoveryService(),
-) =>
-  new Elysia({
-    name: "discovery-plugin",
-    prefix: "/v1/agents",
-  }).use(createDiscoveryRoutes(service));
-
-export const discoveryPlugin = createDiscoveryPlugin();
+export const discoveryPlugin = new Elysia({
+  name: "discovery-plugin",
+  prefix: "/v1/agents",
+}).use(createDiscoveryRoutes(discoveryService));

@@ -1252,6 +1252,34 @@ paths:
                         type: object
                         properties: {}
                 $id: "#/components/schemas/ErrorEnvelope"
+        "501":
+          description: Response for status 501
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                      - details
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
+                $id: "#/components/schemas/ErrorEnvelope"
       operationId: getV1AgentsByAgentId
   /v1/agents/search:
     post:
@@ -1547,6 +1575,34 @@ paths:
                 $id: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Response for status 401
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                      - retryable
+                      - details
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+                      details:
+                        additionalProperties: true
+                        type: object
+                        properties: {}
+                $id: "#/components/schemas/ErrorEnvelope"
+        "501":
+          description: Response for status 501
           content:
             application/json:
               schema:

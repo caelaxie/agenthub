@@ -1,6 +1,5 @@
 import { Elysia } from "elysia";
 
-import { buildPublisherContext } from "../../plugins/auth";
 import { DiscoveryService } from "./discovery.service";
 import {
   discoveryErrorResponseSchema,
@@ -14,8 +13,7 @@ export const createDiscoveryRoutes = (service: DiscoveryService) =>
   new Elysia({ name: "discovery-routes" })
     .get(
       "/:agentId",
-      async ({ params, request }) =>
-        service.getAgentById(params.agentId, buildPublisherContext(request)),
+      async ({ params }) => service.getAgentById(params.agentId),
       {
         params: discoveryParamsSchema,
         response: {
@@ -23,6 +21,7 @@ export const createDiscoveryRoutes = (service: DiscoveryService) =>
           400: discoveryErrorResponseSchema,
           403: discoveryErrorResponseSchema,
           404: discoveryErrorResponseSchema,
+          501: discoveryErrorResponseSchema,
         },
         detail: {
           summary: "Lookup a discoverable agent by id",
@@ -32,14 +31,14 @@ export const createDiscoveryRoutes = (service: DiscoveryService) =>
     )
     .post(
       "/search",
-      async ({ body, request }) =>
-        service.searchAgents(body, buildPublisherContext(request)),
+      async ({ body }) => service.searchAgents(body),
       {
         body: searchAgentsBodySchema,
         response: {
           200: searchAgentsResponseSchema,
           400: discoveryErrorResponseSchema,
           401: discoveryErrorResponseSchema,
+          501: discoveryErrorResponseSchema,
         },
         detail: {
           summary: "Search discoverable agents",

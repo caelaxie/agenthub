@@ -225,7 +225,6 @@ export const searchResponseSchema = t.Object(
 export type AppErrorPayload = typeof appErrorSchema.static;
 export type ErrorEnvelope = typeof errorEnvelopeSchema.static;
 export type HealthResponse = typeof healthResponseSchema.static;
-export type Visibility = typeof visibilitySchema.static;
 export type AgentPublicationInput = typeof agentPublicationInputSchema.static;
 export type AgentPublication = typeof agentPublicationSchema.static;
 export type AgentCardRef = typeof agentCardRefSchema.static;
