@@ -40,6 +40,12 @@ For a fresh local database, apply the generated migrations:
 bun run db:migrate
 ```
 
+To inspect the local database in Drizzle Studio:
+
+```bash
+bun run db:studio
+```
+
 Start the app:
 
 ```bash
