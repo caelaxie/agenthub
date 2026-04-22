@@ -12,7 +12,10 @@ import {
   createPublicationPlugin,
 } from "./modules/publication/publication.plugin";
 import type { PublicationService } from "./modules/publication/publication.service";
-import { verificationPlugin } from "./modules/verification/verification.plugin";
+import {
+  createVerificationPlugin,
+} from "./modules/verification/verification.plugin";
+import type { VerificationService } from "./modules/verification/verification.service";
 import { discoveryPlugin } from "./modules/discovery/discovery.plugin";
 
 const mapUnknownError = (error: unknown) => {
@@ -71,6 +74,7 @@ const readValidationDetails = (error: unknown): Record<string, unknown> => {
 
 export interface AppDependencies {
   publicationService?: PublicationService;
+  verificationService?: VerificationService;
 }
 
 export const buildApp = (dependencies: AppDependencies = {}) =>
@@ -84,7 +88,7 @@ export const buildApp = (dependencies: AppDependencies = {}) =>
     .use(authPlugin)
     .use(healthRoute)
     .use(createPublicationPlugin(dependencies.publicationService))
-    .use(verificationPlugin)
+    .use(createVerificationPlugin(dependencies.verificationService))
     .use(discoveryPlugin)
     .onError(({ code, error, set }) => {
       if (code === "VALIDATION") {

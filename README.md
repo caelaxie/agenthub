@@ -40,6 +40,12 @@ For a fresh local database, apply the generated migrations:
 bun run db:migrate
 ```
 
+To inspect the local database in Drizzle Studio:
+
+```bash
+bun run db:studio
+```
+
 Start the app:
 
 ```bash
@@ -48,6 +54,9 @@ bun run dev
 
 For a step-by-step local QA guide covering Postman requests, happy paths, and
 known placeholder routes, see [`docs/manual-testing.md`](docs/manual-testing.md).
+
+For the publish-to-active domain verification flow and its ownership model, see
+[`docs/domain-verification-workflow.md`](docs/domain-verification-workflow.md).
 
 ## Docker
 

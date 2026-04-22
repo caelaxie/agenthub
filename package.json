@@ -13,7 +13,8 @@
     "docs:openapi:check": "bun run scripts/generate-openapi-docs.ts --check",
     "dev:dummy-agent-card": "bun run scripts/serve-dummy-agent-card.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@elysiajs/cors": "latest",

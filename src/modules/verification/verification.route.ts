@@ -28,7 +28,6 @@ export const createVerificationRoutes = (service: VerificationService) =>
         403: verificationErrorResponseSchema,
         404: verificationErrorResponseSchema,
         409: verificationErrorResponseSchema,
-        501: verificationErrorResponseSchema,
       },
       detail: {
         summary: "Verify domain ownership for a pending publication",

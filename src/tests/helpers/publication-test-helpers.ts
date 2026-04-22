@@ -1,4 +1,5 @@
 import type {
+  PublisherContext,
   AgentPublicationInput,
   DomainVerificationChallenge,
 } from "../../common/types/api";
@@ -10,9 +11,16 @@ import type {
   UpsertPublicationRecord,
 } from "../../modules/publication/publication.entity";
 
+import { HttpError } from "../../common/errors/http-error";
+
 export const validPublicationBody: AgentPublicationInput = {
   agent_card_url: "https://travel.example.com/.well-known/agent-card.json",
   visibility: "public",
+};
+
+export const testPublisher: PublisherContext = {
+  subject: "publisher:test",
+  isAuthenticated: true,
 };
 
 export const validAgentCard = {
@@ -89,6 +97,38 @@ export class InMemoryPublicationRepository implements PublicationRepository {
     });
   }
 
+  async completeVerification(
+    agentId: string,
+    publisherSubject: string,
+    verifiedAt: string,
+  ): Promise<void> {
+    const record = this.records.get(agentId);
+
+    if (!record) {
+      return;
+    }
+
+    const currentOwner = this.namespaceOwners.get(record.namespace) ?? null;
+
+    if (currentOwner && currentOwner !== publisherSubject) {
+      throw HttpError.forbidden(
+        "publication_forbidden",
+        "The caller does not own this publication record.",
+      );
+    }
+
+    this.namespaceOwners.set(record.namespace, publisherSubject);
+    this.records.set(agentId, {
+      ...record,
+      status: "active",
+      namespaceOwnerSubject: publisherSubject,
+      pendingOwnerSubject: null,
+      challenge: undefined,
+      verifiedAt,
+      lastError: null,
+    });
+  }
+
   async deactivate(agentId: string): Promise<void> {
     const record = this.records.get(agentId);
 
@@ -136,15 +176,32 @@ export const createJsonFetchResponse = (
     ...init,
   });
 
+export const createTextFetchResponse = (
+  payload: string,
+  init: ResponseInit = {},
+): Response =>
+  new Response(payload, {
+    status: 200,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      ...init.headers,
+    },
+    ...init,
+  });
+
 export const createStoredRecord = (
   overrides: Partial<StoredPublicationRecord> = {},
 ): StoredPublicationRecord => {
+  const issuedAt = new Date();
+  const verifiedAt = overrides.verifiedAt;
   const challenge: DomainVerificationChallenge = {
     method: "well_known_token",
     url: "https://travel.example.com/.well-known/agenthub-verification/acme.travel-planner",
     token: "ahv1_testtoken",
-    expires_at: "2026-04-20T12:30:00.000Z",
+    expires_at: new Date(issuedAt.getTime() + 30 * 60_000).toISOString(),
   };
+  const lastValidatedAt =
+    overrides.lastValidatedAt ?? new Date(issuedAt.getTime() - 60_000).toISOString();
 
   return {
     agentId: "acme.travel-planner",
@@ -158,14 +215,14 @@ export const createStoredRecord = (
       source_url: validPublicationBody.agent_card_url,
       access_url: validPublicationBody.agent_card_url,
       access_mode: "public",
-      last_validated_at: "2026-04-20T12:00:00.000Z",
+      last_validated_at: lastValidatedAt,
       etag: "\"etag-1\"",
     },
     namespaceOwnerSubject: null,
     pendingOwnerSubject: "publisher:test",
     challenge,
-    lastValidatedAt: "2026-04-20T12:00:00.000Z",
-    verifiedAt: null,
+    lastValidatedAt,
+    verifiedAt: verifiedAt ?? null,
     lastError: null,
     ...overrides,
   };

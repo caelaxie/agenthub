@@ -4,9 +4,43 @@ This runbook is for developers and QA engineers validating the API locally.
 It uses Postman as the primary workflow, with a few `curl` examples for quick
 spot checks.
 
-The current implementation supports the publication lifecycle endpoints. Domain
-verification and discovery are still placeholder flows and are called out below
-so they are not mistaken for fully implemented features.
+The current implementation supports the publication lifecycle endpoints and
+domain verification. Discovery remains a placeholder flow and is called out
+below so it is not mistaken for a fully implemented feature.
+
+## Table Of Contents
+
+- [Prerequisites](#prerequisites)
+- [Local Dummy Agent Card Server](#local-dummy-agent-card-server)
+- [Postman Setup](#postman-setup)
+- [Recommended Local Flow](#recommended-local-flow)
+- [Smoke Checks](#smoke-checks)
+  - [Health](#health)
+  - [OpenAPI Document](#openapi-document)
+- [Publication Lifecycle Checks](#publication-lifecycle-checks)
+  - [Publish Success](#publish-success)
+  - [Re-publish Same Origin](#re-publish-same-origin)
+  - [Owner-only Publication Read](#owner-only-publication-read)
+  - [Deactivate](#deactivate)
+- [Negative-path Checks](#negative-path-checks)
+  - [Invalid Agent ID](#invalid-agent-id)
+  - [Malformed Publish Body](#malformed-publish-body)
+  - [Non-HTTPS Agent Card URL](#non-https-agent-card-url)
+  - [Unauthorized Owner-only Access](#unauthorized-owner-only-access)
+  - [Namespace Conflict](#namespace-conflict)
+  - [Cross-origin Re-publish](#cross-origin-re-publish)
+  - [Duplicate Active Source URL](#duplicate-active-source-url)
+  - [Upstream Card Fetch Failure](#upstream-card-fetch-failure)
+  - [Malformed Agent Card](#malformed-agent-card)
+- [Discovery and Verification Notes](#discovery-and-verification-notes)
+  - [Domain Verification](#domain-verification)
+  - [Discovery Search](#discovery-search)
+  - [Exact Discovery Lookup](#exact-discovery-lookup)
+- [Troubleshooting](#troubleshooting)
+  - [Database or migration issues](#database-or-migration-issues)
+  - [Agent Card fetch failures](#agent-card-fetch-failures)
+  - [Auth mistakes](#auth-mistakes)
+  - [Placeholder routes](#placeholder-routes)
 
 ## Prerequisites
 
@@ -85,6 +119,7 @@ Default URLs:
 
 - Agent Card: `https://localhost:8443/.well-known/agent-card.json`
 - Interface endpoint: `https://localhost:8443/a2a`
+- Verification admin endpoint: `https://localhost:8443/__admin/verification`
 
 The script exits with setup instructions if the TLS files are missing. You can
 override the defaults with:
@@ -94,6 +129,30 @@ override the defaults with:
 - `DUMMY_AGENT_CARD_BIND_HOST`
 - `DUMMY_AGENT_CARD_CERT_PATH`
 - `DUMMY_AGENT_CARD_KEY_PATH`
+
+After a publish response returns a `challenge.token`, configure the dummy
+server with:
+
+```bash
+curl https://localhost:8443/__admin/verification \
+  -H 'content-type: application/json' \
+  -d '{
+    "agent_id": "acme.travel-planner",
+    "token": "ahv1_your_token_here"
+  }'
+```
+
+That makes the server return the exact expected body from:
+
+```text
+https://localhost:8443/.well-known/agenthub-verification/acme.travel-planner
+```
+
+You can inspect the currently configured agent ids with:
+
+```bash
+curl https://localhost:8443/__admin/verification
+```
 
 ## Postman Setup
 
@@ -121,6 +180,32 @@ For publication routes, send:
 | --- | --- |
 | `Content-Type` | `application/json` |
 | `Authorization` | `{{publisherToken}}` |
+
+Important note:
+
+- In the current dev auth implementation, the raw `Authorization` header value
+  becomes the publisher subject.
+- Use the same `Authorization` header value for publish, owner-only read,
+  verify-domain, and deactivate when testing a single publication lifecycle.
+- If you switch from `Bearer publisher-token` to a different string later in
+  the flow, owner checks will fail with `403 publication_forbidden`.
+
+## Recommended Local Flow
+
+For the lowest-friction local test flow, run the steps in this order:
+
+1. `docker compose up -d`
+2. `bun run db:migrate`
+3. `bun run dev:dummy-agent-card`
+4. `bun run dev:with-local-ca`
+5. `PUT /v1/publish/agents/{{agentId}}`
+6. copy `challenge.token` from the publish response
+7. `POST https://localhost:8443/__admin/verification` with `agent_id` and `token`
+8. `POST /v1/publish/agents/{{agentId}}/verify-domain`
+9. `GET /v1/publish/agents/{{agentId}}` to confirm `status = "active"`
+
+This sequence exercises the full publish-to-active path on one local HTTPS
+origin and avoids external upstream dependencies.
 
 ## Smoke Checks
 
@@ -398,9 +483,6 @@ Expect:
 
 ## Discovery and Verification Notes
 
-These routes are not fully implemented yet and should currently be treated as
-placeholder behavior during manual testing.
-
 ### Domain Verification
 
 Request:
@@ -419,10 +501,23 @@ Body:
 }
 ```
 
-Current expectation:
+Successful verification expectations:
 
-- `501 Not Implemented`
-- `error.code = "domain_verification_not_implemented"`
+- `200 OK`
+- response status becomes `active`
+- response includes `verified_at`
+- owner-only `GET /v1/publish/agents/{{agentId}}` no longer includes `challenge`
+
+For the recommended local sequence, see [Recommended Local Flow](#recommended-local-flow).
+
+Failure cases to verify:
+
+- expired or missing active challenge returns `409`
+- `error.code = "verification_challenge_expired"`
+- wrong body, missing file, or cross-origin redirect returns `403`
+- `error.code = "domain_verification_failed"`
+- wrong owner subject returns `403`
+- `error.code = "publication_forbidden"`
 
 ### Discovery Search
 
@@ -508,5 +603,6 @@ Symptoms:
 
 Checks:
 
-- confirm you are testing discovery or domain verification, which are still
-  expected placeholders in the current repo state
+- confirm you are testing a discovery route
+- `POST /v1/publish/agents/{agent_id}/verify-domain` is implemented and should
+  not still return `501`
