@@ -538,10 +538,14 @@ Body:
 }
 ```
 
-Current expectation:
+Expected behavior:
 
-- `501 Not Implemented`
-- `error.code = "discovery_search_not_implemented"`
+- `200 OK`
+- returns only discoverable `active` entries visible to the caller
+- unauthenticated callers only see `public` entries by default
+- explicit `visibility = "restricted"` without auth returns
+  `401 restricted_search_requires_auth`
+- malformed or mismatched `page_token` returns `400 invalid_page_token`
 
 ### Exact Discovery Lookup
 
@@ -551,10 +555,12 @@ Request:
 GET {{baseUrl}}/v1/agents/{{agentId}}
 ```
 
-Current expectation:
+Expected behavior:
 
-- `501 Not Implemented`
-- `error.code = "discovery_lookup_not_implemented"`
+- `200 OK` for visible `active` entries
+- `404 agent_not_found` for missing or non-discoverable entries
+- `403 restricted_entry_forbidden` for restricted entries when the caller is
+  unauthenticated
 
 ## Troubleshooting
 
@@ -595,14 +601,15 @@ Checks:
 - the same token is used for publish, read, and deactivate when testing the
   same publication
 
-### Placeholder routes
+### Discovery auth or cursor mistakes
 
 Symptoms:
 
-- `501 Not Implemented`
+- restricted discovery returns `401` or `403`
+- paginated search returns `400 invalid_page_token`
 
 Checks:
 
-- confirm you are testing a discovery route
-- `POST /v1/publish/agents/{agent_id}/verify-domain` is implemented and should
-  not still return `501`
+- `Authorization` header is present when searching restricted entries
+- the same query body is reused when following `next_page_token`
+- the token is not reused across authenticated and unauthenticated requests

@@ -5,6 +5,7 @@ import {
   PublicationService,
   type FetchLike,
 } from "../../modules/publication/publication.service";
+import { DiscoveryService } from "../../modules/discovery/discovery.service";
 import { VerificationService } from "../../modules/verification/verification.service";
 import {
   createJsonFetchResponse,
@@ -14,6 +15,10 @@ import {
   validAgentCard,
   validPublicationBody,
 } from "../helpers/publication-test-helpers";
+import {
+  createDiscoveryRecord,
+  InMemoryDiscoveryRepository,
+} from "../helpers/discovery-test-helpers";
 
 describe("route validation and publication behavior", () => {
   let repo: InMemoryPublicationRepository;
@@ -606,8 +611,92 @@ describe("route validation and publication behavior", () => {
     expect(payload.error.code).toBe("publisher_auth_required");
   });
 
-  it("returns typed 501 placeholders for discovery routes", async () => {
-    const app = buildApp();
+  it("returns a discoverable public record by exact lookup", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([createDiscoveryRecord()]),
+      ),
+    });
+    const response = await app.handle(
+      new Request("http://localhost/v1/agents/acme.travel-planner", {
+        method: "GET",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.agent_id).toBe("acme.travel-planner");
+  });
+
+  it("returns 403 for unauthenticated restricted lookup", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([
+          createDiscoveryRecord({
+            agent_id: "acme.payroll",
+            visibility: "restricted",
+          }),
+        ]),
+      ),
+    });
+    const response = await app.handle(
+      new Request("http://localhost/v1/agents/acme.payroll", {
+        method: "GET",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(payload.error.code).toBe("restricted_entry_forbidden");
+  });
+
+  it("allows authenticated restricted lookup", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([
+          createDiscoveryRecord({
+            agent_id: "acme.payroll",
+            visibility: "restricted",
+          }),
+        ]),
+      ),
+    });
+    const response = await app.handle(
+      new Request("http://localhost/v1/agents/acme.payroll", {
+        method: "GET",
+        headers: {
+          authorization: "publisher:test",
+        },
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.agent_id).toBe("acme.payroll");
+    expect(payload.visibility).toBe("restricted");
+  });
+
+  it("applies AND semantics across top-level filters", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([
+          createDiscoveryRecord({
+            agent_id: "acme.match",
+            provider: "Acme Travel Systems",
+            skills: ["flight-search"],
+            tags: ["travel"],
+            supported_bindings: ["HTTP+JSON"],
+          }),
+          createDiscoveryRecord({
+            agent_id: "acme.no-provider",
+            provider: "Other Provider",
+            skills: ["flight-search"],
+            tags: ["travel"],
+            supported_bindings: ["HTTP+JSON"],
+          }),
+        ]),
+      ),
+    });
     const response = await app.handle(
       new Request("http://localhost/v1/agents/search", {
         method: "POST",
@@ -616,14 +705,212 @@ describe("route validation and publication behavior", () => {
         },
         body: JSON.stringify({
           query: {
-            text: "travel",
+            provider: "Acme Travel Systems",
+            skills: ["flight-search"],
+            tags: ["travel"],
+            supported_bindings: ["HTTP+JSON"],
           },
         }),
       }),
     );
     const payload = await response.json();
 
-    expect(response.status).toBe(501);
-    expect(payload.error.code).toBe("discovery_search_not_implemented");
+    expect(response.status).toBe(200);
+    expect(payload.results.map((record: { agent_id: string }) => record.agent_id)).toEqual([
+      "acme.match",
+    ]);
+  });
+
+  it("uses match-all semantics for array filters", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([
+          createDiscoveryRecord({
+            agent_id: "acme.full-match",
+            tags: ["booking", "travel"],
+          }),
+          createDiscoveryRecord({
+            agent_id: "acme.partial-match",
+            tags: ["travel"],
+          }),
+        ]),
+      ),
+    });
+    const response = await app.handle(
+      new Request("http://localhost/v1/agents/search", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          query: {
+            tags: ["travel", "booking"],
+          },
+        }),
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.results.map((record: { agent_id: string }) => record.agent_id)).toEqual([
+      "acme.full-match",
+    ]);
+  });
+
+  it("orders text search by token hits and agent_id tie-breaker", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([
+          createDiscoveryRecord({
+            agent_id: "acme.alpha",
+            display_name: "Travel Booking Planner",
+            tags: ["travel", "booking"],
+          }),
+          createDiscoveryRecord({
+            agent_id: "acme.beta",
+            display_name: "Travel Planner",
+            tags: ["travel"],
+          }),
+          createDiscoveryRecord({
+            agent_id: "acme.gamma",
+            display_name: "Travel Agent",
+            tags: ["travel"],
+          }),
+        ]),
+      ),
+    });
+    const response = await app.handle(
+      new Request("http://localhost/v1/agents/search", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          query: {
+            text: "travel booking",
+          },
+        }),
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.results.map((record: { agent_id: string }) => record.agent_id)).toEqual([
+      "acme.alpha",
+      "acme.beta",
+      "acme.gamma",
+    ]);
+  });
+
+  it("supports cursor pagination and rejects mismatched tokens", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([
+          createDiscoveryRecord({
+            agent_id: "acme.alpha",
+            display_name: "Travel Alpha",
+            tags: ["travel"],
+          }),
+          createDiscoveryRecord({
+            agent_id: "acme.beta",
+            display_name: "Travel Beta",
+            tags: ["travel"],
+          }),
+        ]),
+      ),
+    });
+    const firstResponse = await app.handle(
+      new Request("http://localhost/v1/agents/search", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          query: {
+            text: "travel",
+            page_size: 1,
+          },
+        }),
+      }),
+    );
+    const firstPayload = await firstResponse.json();
+
+    expect(firstResponse.status).toBe(200);
+    expect(firstPayload.results.map((record: { agent_id: string }) => record.agent_id)).toEqual([
+      "acme.alpha",
+    ]);
+    expect(firstPayload.next_page_token).toBeString();
+
+    const secondResponse = await app.handle(
+      new Request("http://localhost/v1/agents/search", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          query: {
+            text: "travel",
+            page_size: 1,
+            page_token: firstPayload.next_page_token,
+          },
+        }),
+      }),
+    );
+    const secondPayload = await secondResponse.json();
+
+    expect(secondResponse.status).toBe(200);
+    expect(secondPayload.results.map((record: { agent_id: string }) => record.agent_id)).toEqual([
+      "acme.beta",
+    ]);
+
+    const invalidResponse = await app.handle(
+      new Request("http://localhost/v1/agents/search", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          query: {
+            text: "planner",
+            page_size: 1,
+            page_token: firstPayload.next_page_token,
+          },
+        }),
+      }),
+    );
+    const invalidPayload = await invalidResponse.json();
+
+    expect(invalidResponse.status).toBe(400);
+    expect(invalidPayload.error.code).toBe("invalid_page_token");
+  });
+
+  it("requires auth for explicit restricted search", async () => {
+    const app = buildApp({
+      discoveryService: new DiscoveryService(
+        new InMemoryDiscoveryRepository([
+          createDiscoveryRecord({
+            agent_id: "acme.payroll",
+            visibility: "restricted",
+          }),
+        ]),
+      ),
+    });
+    const response = await app.handle(
+      new Request("http://localhost/v1/agents/search", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          query: {
+            visibility: "restricted",
+          },
+        }),
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(payload.error.code).toBe("restricted_search_requires_auth");
   });
 });
